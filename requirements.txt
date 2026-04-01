@@ -1,0 +1,6 @@
+feedparser>=6.0.0
+trafilatura>=2.0.0
+yfinance>=0.2.40
+python-dotenv>=1.0.0
+requests-oauthlib>=2.0.0
+pyetrade>=1.4.0
