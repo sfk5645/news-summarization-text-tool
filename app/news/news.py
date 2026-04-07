@@ -1,7 +1,9 @@
 """RSS ingestion: fetch recent articles per topic and extract plain text for storage / RAG."""
 
+import hashlib
 import re
 import time
+import urllib.parse
 from datetime import date, datetime, timezone
 from typing import Any
 
@@ -150,6 +152,43 @@ def _quote_metrics(symbol: str) -> dict[str, Any]:
     return out
 
 
+def _fmt_price_short(x: Any) -> str:
+    """Human-readable price for snapshot text (avoids float noise in digests)."""
+    if x is None:
+        return ""
+    try:
+        return f"{float(x):.2f}"
+    except (TypeError, ValueError):
+        return str(x)
+
+
+def _google_news_rss_for_symbol(symbol: str, limit: int) -> list[dict[str, str]]:
+    """
+    Headlines when Yahoo's ``Ticker.news`` is empty — Google News RSS by ticker query.
+
+    Returns dicts with ``title``, ``link``, ``published_at`` (ISO or empty).
+    """
+    sym = (symbol or "").strip().upper()
+    if not sym:
+        return []
+    q = urllib.parse.quote(f"{sym} stock")
+    url = f"https://news.google.com/rss/search?q={q}&hl=en-US&gl=US&ceid=US:en"
+    try:
+        feed = feedparser.parse(url)
+    except Exception:  # noqa: BLE001
+        return []
+    entries = getattr(feed, "entries", []) or []
+    out: list[dict[str, str]] = []
+    for entry in entries[:limit]:
+        title = (getattr(entry, "title", None) or "").strip()
+        link = (getattr(entry, "link", None) or "").strip()
+        if not title and not link:
+            continue
+        pub = _published_iso(entry) or ""
+        out.append({"title": title, "link": link, "published_at": pub})
+    return out
+
+
 def _published_iso_from_unix(ts: Any) -> str | None:
     if ts is None:
         return None
@@ -166,7 +205,8 @@ def _finance_portfolio_rows(
 ) -> list[dict[str, Any]]:
     """
     Rows for ``FINANCE_TOPIC`` only: E*TRADE portfolio symbols (see ``e_trade_service``)
-    with Yahoo quote snapshot and headline news per symbol.
+    with Yahoo quote snapshot and headline news per symbol. If Yahoo's ``Ticker.news`` is empty,
+    headlines are filled from Google News RSS for the same ``limit_news_per_symbol`` cap.
     """
     from app.users.e_trade_service import get_portfolio_ticket_symbols
 
@@ -190,16 +230,17 @@ def _finance_portfolio_rows(
         cur = metrics.get("currency") or ""
         err = metrics.get("error")
 
+        pct_s = f"{float(pct):.2f}" if pct is not None else None
         snap_lines = [
             f"Ticker: {symbol}",
-            f"Day change (approx. vs prior close): {pct}%"
-            if pct is not None
+            f"Day change (approx. vs prior close): {pct_s}%"
+            if pct_s is not None
             else "Day change: unavailable",
         ]
         if last_p is not None:
-            snap_lines.append(f"Last price: {last_p} {cur}".strip())
+            snap_lines.append(f"Last price: {_fmt_price_short(last_p)} {cur}".strip())
         if prev_p is not None:
-            snap_lines.append(f"Previous close: {prev_p} {cur}".strip())
+            snap_lines.append(f"Previous close: {_fmt_price_short(prev_p)} {cur}".strip())
         if err:
             snap_lines.append(f"Quote note: {err}")
         snapshot_content = "\n".join(snap_lines)
@@ -227,6 +268,7 @@ def _finance_portfolio_rows(
         except Exception:  # noqa: BLE001
             news_items = []
 
+        yahoo_count = 0
         for item in news_items[:limit_news_per_symbol]:
             title = (item.get("title") or "").strip()
             link = (item.get("link") or "").strip()
@@ -260,6 +302,36 @@ def _finance_portfolio_rows(
                     "currency": metrics.get("currency"),
                 }
             )
+            yahoo_count += 1
+
+        if yahoo_count == 0:
+            for gn in _google_news_rss_for_symbol(symbol, limit_news_per_symbol):
+                g_title = gn["title"] or f"News related to {symbol}"
+                g_link = gn["link"] or f"https://finance.yahoo.com/quote/{symbol}"
+                g_pub = gn["published_at"] or None
+                if fetch_article_body and g_link:
+                    body = _article_content(g_link, "")
+                else:
+                    body = f"Source: Google News (Yahoo headlines unavailable). {g_title}".strip()
+                if not body:
+                    body = g_title
+                g_key = hashlib.sha256(f"{symbol}|{g_link}".encode()).hexdigest()[:20]
+                rows.append(
+                    {
+                        "topic": FINANCE_TOPIC,
+                        "title": g_title,
+                        "url": g_link,
+                        "published_at": g_pub,
+                        "content": body,
+                        "guid": f"finance:portfolio:news:{symbol}:google:{g_key}",
+                        "feed_url": "finance:portfolio:news",
+                        "symbol": symbol,
+                        "pct_change_day": pct,
+                        "last_price": last_p,
+                        "previous_close": prev_p,
+                        "currency": metrics.get("currency"),
+                    }
+                )
 
     return rows
 
@@ -276,7 +348,8 @@ def fetch_news(
 
     For topic ``FINANCE`` only, after the Dow Jones RSS items, appends rows for each symbol
     from ``get_portfolio_ticket_symbols()``: a quote snapshot (``%`` up/down vs prior close)
-    and Yahoo Finance news lines. All other topics behave as plain RSS.
+    and Yahoo Finance news lines (or Google News RSS when Yahoo returns none). All other topics
+    behave as plain RSS.
 
     Args:
         limit_per_topic: Maximum RSS items per topic (newest-first typical).
@@ -333,7 +406,7 @@ def fetch_news(
 
 if __name__ == "__main__":
     for row in fetch_news(
-        limit_per_topic=1,
+        limit_per_topic=5,
         include_finance_portfolio=True,
         limit_finance_portfolio_news_per_symbol=1,
         finance_portfolio_fetch_full_text=False,
