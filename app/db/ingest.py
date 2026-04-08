@@ -47,6 +47,11 @@ def main() -> None:
         help="Skip Ollama bullet digest after ingest (default: summarize)",
     )
     p.add_argument(
+        "--no-rag-index",
+        action="store_true",
+        help="Skip pgvector RAG reindex after ingest (default: reindex latest batch only)",
+    )
+    p.add_argument(
         "--print-digest",
         action="store_true",
         help="Print each topic/symbol digest to stdout after Ollama (requires summarization)",
@@ -68,6 +73,7 @@ def main() -> None:
         finance_portfolio_fetch_full_text=not args.portfolio_no_fulltext,
         summarize_digest=summarize,
         print_digest=summarize and args.print_digest,
+        index_rag=not args.no_rag_index,
     )
     print(f"Upserted {n} article row(s).")
     if summarize:
