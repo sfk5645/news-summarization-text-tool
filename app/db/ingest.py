@@ -56,6 +56,11 @@ def main() -> None:
         action="store_true",
         help="Print each topic/symbol digest to stdout after Ollama (requires summarization)",
     )
+    p.add_argument(
+        "--telegram",
+        action="store_true",
+        help="Send digest PDF to Telegram (needs TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID and/or TELEGRAM_DIGEST_CHAT_IDS; requires summarization)",
+    )
     args = p.parse_args()
 
     if args.init_schema:
@@ -64,6 +69,9 @@ def main() -> None:
 
     if args.skip_fetch:
         return
+
+    if args.telegram and args.no_summarize:
+        p.error("--telegram requires digest summaries; omit --no-summarize")
 
     summarize = not args.no_summarize
     n = fetch_and_store_news(
@@ -74,6 +82,7 @@ def main() -> None:
         summarize_digest=summarize,
         print_digest=summarize and args.print_digest,
         index_rag=not args.no_rag_index,
+        telegram_digest=summarize and args.telegram,
     )
     print(f"Upserted {n} article row(s).")
     if summarize:

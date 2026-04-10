@@ -13,3 +13,4 @@ langchain-text-splitters>=0.3
 langchain-core>=0.3
 sqlalchemy>=2.0
 pgvector>=0.3
+fpdf2>=2.8.0

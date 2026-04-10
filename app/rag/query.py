@@ -1,5 +1,7 @@
 """Answer questions using only the latest-indexed article chunks (LangChain + pgvector)."""
 
+import warnings
+warnings.filterwarnings("ignore")
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -110,4 +112,4 @@ def ask_latest_news(question: str, *, k: int = 8) -> RAGAnswer:
     msg = chain.invoke({"context": context, "question": q})
     answer = (msg.content or "").strip() if hasattr(msg, "content") else str(msg).strip()
 
-    return RAGAnswer(answer=answer, sources=_dedupe_sources(docs))
+    return RAGAnswer(answer=answer, sources=_dedupe_sources([docs[0]]) if docs else [])

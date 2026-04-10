@@ -171,6 +171,7 @@ def fetch_and_store_news(
     summarize_digest: bool = False,
     print_digest: bool = False,
     index_rag: bool = True,
+    telegram_digest: bool = False,
     **fetch_kwargs: Any,
 ) -> int:
     """
@@ -181,6 +182,9 @@ def fetch_and_store_news(
         summarize_digest: If True, after upserting, call Ollama and write rows to
             ``digest_summaries`` for this batch (separate DB connection for inserts).
         print_digest: If True (and ``summarize_digest``), print each digest to stdout.
+        telegram_digest: If True (and ``summarize_digest``), send the digest PDF to every
+            configured Telegram chat (``TELEGRAM_BOT_TOKEN`` plus ``TELEGRAM_CHAT_ID`` and/or
+            ``TELEGRAM_DIGEST_CHAT_IDS``).
         index_rag: If True, replace the pgvector index so RAG queries only see this fetch's
             articles (LangChain PGVector + ``nomic-embed-text``). Requires ``CREATE EXTENSION
             vector`` on Postgres and LangChain deps installed.
@@ -193,10 +197,15 @@ def fetch_and_store_news(
 
     rows = fetch_news(**fetch_kwargs)
     n = upsert_articles(rows, conn=conn)
+    digest_rows: list[dict[str, Any]] = []
     if summarize_digest and rows:
         from app.summarize.digest import run_digest_for_rows
 
-        run_digest_for_rows(rows, print_digest=print_digest)
+        _, digest_rows = run_digest_for_rows(rows, print_digest=print_digest)
+    if telegram_digest and digest_rows:
+        from app.telegram.notify import send_digest_pdf
+
+        send_digest_pdf(digest_rows)
     if index_rag:
         from app.rag.index import reindex_rag_from_rows
 

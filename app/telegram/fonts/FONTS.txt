@@ -1,0 +1,4 @@
+Bundled fonts for digest PDF rendering:
+
+- DejaVuSans.ttf, DejaVuSans-Bold.ttf — DejaVu Fonts 2.37, see https://dejavu-fonts.github.io/License.html
+- NotoSansSymbols2-Regular.ttf — Noto Sans Symbols 2, SIL Open Font License 1.1 (https://openfontlicense.org)

@@ -319,7 +319,7 @@ def run_digest_for_rows(
     run_at: datetime | None = None,
     conn: Any = None,
     print_digest: bool = False,
-) -> int:
+) -> tuple[int, list[dict[str, Any]]]:
     """
     Store bullet digests in Postgres.
 
@@ -337,10 +337,10 @@ def run_digest_for_rows(
         print_digest: If True, print each ``scope`` and its bullets to stdout before DB insert.
 
     Returns:
-        Number of digest rows inserted.
+        ``(number of digest rows inserted, the digest row dicts written)``.
     """
     if not rows:
-        return 0
+        return 0, []
 
     rt = run_at or datetime.now(timezone.utc)
     groups = _group_rows(rows)
@@ -389,4 +389,5 @@ def run_digest_for_rows(
             print()
         print("========================================\n")
 
-    return insert_digest_rows(out_rows, conn=conn)
+    n = insert_digest_rows(out_rows, conn=conn)
+    return n, out_rows

@@ -1,7 +1,8 @@
 """CLI: ``python -m app.rag ask \"Your question\"``."""
 
 from __future__ import annotations
-
+import warnings
+warnings.filterwarnings("ignore")
 import argparse
 import json
 import sys
