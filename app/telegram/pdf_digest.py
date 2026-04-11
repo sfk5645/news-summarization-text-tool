@@ -13,6 +13,33 @@ from app.news.news import FINANCE_TOPIC, RSS_FEEDS_BY_TOPIC
 
 _FONT_DIR = Path(__file__).resolve().parent / "fonts"
 
+# Topic markers drawn with SymbolEmoji (Noto Sans Symbols2), except these BMP glyphs which
+# that font lacks: strip U+FE0F from emoji strings before drawing.
+_TOPIC_EMOJI: dict[str, str] = {
+    "WORLD": "🌍",
+    "NATIONAL": "🗞️",
+    "LOCAL": "\u25aa",  # ▪ replaces 📍 (U+1F4CD); U+2316 missing in bundled DejaVu
+    "POLITICS": "🏛️",
+    "BUSINESS": "\u25c6",  # ◆ replaces 💼 (U+1F4BC)
+    "FINANCE": "📈",
+    "TECHNOLOGY": "💻",
+    "SCIENCE": "\u2697",  # ⚗ replaces 🔬 (U+1F52C)
+    "HEALTH": "\u2695",  # ⚕ replaces 🏥 (U+1F3E5)
+    "SPORTS": "⚽",
+    "ENTERTAINMENT": "🎬",
+    "UNKNOWN": "📋",
+}
+
+# Draw with DejaVu (outline) — Noto Symbols2 omits these; DejaVu Sans regular includes them.
+_BMP_MARKER_FOR_DEJAVU: frozenset[str] = frozenset(
+    {
+        "\u25aa",  # ▪ LOCAL
+        "\u25c6",  # ◆ BUSINESS
+        "\u2697",  # ⚗ SCIENCE
+        "\u2695",  # ⚕ HEALTH
+    }
+)
+
 
 def _register_fonts(pdf: FPDF) -> None:
     regular = _FONT_DIR / "DejaVuSans.ttf"
@@ -31,21 +58,6 @@ def _register_fonts(pdf: FPDF) -> None:
     pdf.add_font("DejaVu", "", str(regular))
     pdf.add_font("DejaVu", "B", str(bold))
     pdf.add_font("SymbolEmoji", "", str(symbols2))
-
-_TOPIC_EMOJI: dict[str, str] = {
-    "WORLD": "🌍",
-    "NATIONAL": "🗞️",
-    "LOCAL": "📍",
-    "POLITICS": "🏛️",
-    "BUSINESS": "💼",
-    "FINANCE": "📈",
-    "TECHNOLOGY": "💻",
-    "SCIENCE": "🔬",
-    "HEALTH": "🏥",
-    "SPORTS": "⚽",
-    "ENTERTAINMENT": "🎬",
-    "UNKNOWN": "📋",
-}
 
 
 def _topic_display_order() -> list[str]:
@@ -104,8 +116,13 @@ class _DigestPDF(FPDF):
         self.set_margins(16, 16, 16)
 
     def section_title(self, emoji: str, title_text: str) -> None:
-        self.set_font("SymbolEmoji", "", 14)
-        self.write(8, emoji)
+        s = emoji.replace("\ufe0f", "")
+        if s in _BMP_MARKER_FOR_DEJAVU:
+            self.set_font("DejaVu", "", 14)
+            self.write(8, s)
+        else:
+            self.set_font("SymbolEmoji", "", 14)
+            self.write(8, s)
         self.set_font("DejaVu", "B", 13)
         self.write(8, f"  {title_text}")
         self.ln(9)

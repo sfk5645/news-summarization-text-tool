@@ -22,5 +22,16 @@ def send_digest_pdf(digest_rows: list[dict[str, Any]]) -> None:
         stamp = "digest"
     filename = f"news-digest-{stamp}.pdf"
     caption = f"Daily news digest ({stamp})"
+    errors: list[str] = []
     for chat_id in cfg.digest_chat_ids:
-        send_document(cfg.bot_token, chat_id, filename, pdf_bytes, caption=caption)
+        cid = (chat_id or "").strip()
+        if not cid:
+            continue
+        try:
+            send_document(cfg.bot_token, cid, filename, pdf_bytes, caption=caption)
+        except Exception as ex:  # noqa: BLE001 — log per-chat; one bad chat must not block others
+            errors.append(f"chat_id={cid!r}: {ex}")
+    if errors:
+        raise RuntimeError(
+            "Telegram digest PDF failed for one or more chats:\n" + "\n".join(errors)
+        )

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from io import BytesIO
 from typing import Any
 
 import httpx
@@ -32,12 +31,23 @@ def send_document(
     *,
     caption: str | None = None,
 ) -> dict[str, Any]:
-    files = {"document": (filename, BytesIO(data), "application/pdf")}
-    form: dict[str, Any] = {"chat_id": chat_id}
+    # Pass raw bytes (not a shared BytesIO) so multi-chat sends each upload a full file payload.
+    safe_name = filename.replace("\\", "/").split("/")[-1] or "document.pdf"
+    files = {"document": (safe_name, data, "application/pdf")}
+    form: dict[str, Any] = {"chat_id": chat_id.strip()}
     if caption:
         form["caption"] = caption[:1024]
     r = httpx.post(f"{_base(token)}/sendDocument", data=form, files=files, timeout=120.0)
-    r.raise_for_status()
+    try:
+        r.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        try:
+            detail = r.json()
+        except Exception:
+            detail = r.text
+        raise RuntimeError(
+            f"Telegram sendDocument failed for chat_id={chat_id!r}: {detail}"
+        ) from e
     body = r.json()
     if not body.get("ok"):
         raise RuntimeError(f"Telegram sendDocument failed: {body!r}")

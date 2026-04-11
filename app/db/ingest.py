@@ -59,7 +59,8 @@ def main() -> None:
     p.add_argument(
         "--telegram",
         action="store_true",
-        help="Send digest PDF to Telegram (needs TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID and/or TELEGRAM_DIGEST_CHAT_IDS; requires summarization)",
+        help="Send digest PDF to Telegram (needs TELEGRAM_BOT_TOKEN; same chats as bot: "
+        "TELEGRAM_ALLOWED_CHAT_IDS and/or TELEGRAM_CHAT_ID; requires summarization)",
     )
     args = p.parse_args()
 

@@ -182,9 +182,9 @@ def fetch_and_store_news(
         summarize_digest: If True, after upserting, call Ollama and write rows to
             ``digest_summaries`` for this batch (separate DB connection for inserts).
         print_digest: If True (and ``summarize_digest``), print each digest to stdout.
-        telegram_digest: If True (and ``summarize_digest``), send the digest PDF to every
-            configured Telegram chat (``TELEGRAM_BOT_TOKEN`` plus ``TELEGRAM_CHAT_ID`` and/or
-            ``TELEGRAM_DIGEST_CHAT_IDS``).
+        telegram_digest: If True (and ``summarize_digest``), send the digest PDF to the same
+            chats as the bot (``TELEGRAM_ALLOWED_CHAT_IDS`` and/or ``TELEGRAM_CHAT_ID``; see
+            ``allowed_chat_id_list`` in ``app.telegram.config``).
         index_rag: If True, replace the pgvector index so RAG queries only see this fetch's
             articles (LangChain PGVector + ``nomic-embed-text``). Requires ``CREATE EXTENSION
             vector`` on Postgres and LangChain deps installed.

@@ -20,25 +20,34 @@ def _strip_env(name: str) -> str:
     return (os.getenv(name) or "").strip()
 
 
-def digest_recipient_chat_ids() -> list[str]:
+def allowed_chat_id_list() -> list[str]:
     """
-    Chats that receive the digest PDF: ``TELEGRAM_CHAT_ID`` first (if set), then each id in
-    comma-separated ``TELEGRAM_DIGEST_CHAT_IDS``, deduplicated.
+    Chats allowed for the RAG bot and (same order) recipients for the digest PDF.
+
+    If ``TELEGRAM_ALLOWED_CHAT_IDS`` is set: that comma-separated list (deduped, order kept),
+    with ``TELEGRAM_CHAT_ID`` inserted at the front when set and not already in the list.
+    Otherwise: ``[TELEGRAM_CHAT_ID]`` when that is set, else empty.
     """
-    seen: set[str] = set()
-    out: list[str] = []
+    raw = _strip_env("TELEGRAM_ALLOWED_CHAT_IDS")
     one = _strip_env("TELEGRAM_CHAT_ID")
-    if one:
-        seen.add(one)
-        out.append(one)
-    multi = _strip_env("TELEGRAM_DIGEST_CHAT_IDS")
-    if multi:
-        for part in multi.split(","):
+    if raw:
+        seen: set[str] = set()
+        out: list[str] = []
+        if one:
+            seen.add(one)
+            out.append(one)
+        for part in raw.split(","):
             x = part.strip()
             if x and x not in seen:
                 seen.add(x)
                 out.append(x)
-    return out
+        return out
+    return [one] if one else []
+
+
+def digest_recipient_chat_ids() -> list[str]:
+    """Same membership and order as :func:`allowed_chat_id_list`."""
+    return allowed_chat_id_list()
 
 
 def load_telegram_config() -> TelegramConfig | None:
@@ -56,21 +65,14 @@ def require_digest_config() -> TelegramConfig:
     if not cfg:
         raise RuntimeError(
             "Telegram digest needs TELEGRAM_BOT_TOKEN and at least one recipient: "
-            "TELEGRAM_CHAT_ID and/or comma-separated TELEGRAM_DIGEST_CHAT_IDS."
+            "TELEGRAM_ALLOWED_CHAT_IDS and/or TELEGRAM_CHAT_ID."
         )
     return cfg
 
 
 def allowed_chat_ids() -> set[str]:
-    """
-    Chats that may use the RAG bot. Uses TELEGRAM_ALLOWED_CHAT_IDS (comma-separated) when set;
-    otherwise TELEGRAM_CHAT_ID only.
-    """
-    raw = _strip_env("TELEGRAM_ALLOWED_CHAT_IDS")
-    if raw:
-        return {x.strip() for x in raw.split(",") if x.strip()}
-    chat = _strip_env("TELEGRAM_CHAT_ID")
-    return {chat} if chat else set()
+    """Set of chats that may use the RAG bot (same ids as digest PDF list)."""
+    return set(allowed_chat_id_list())
 
 
 def require_bot_token() -> str:

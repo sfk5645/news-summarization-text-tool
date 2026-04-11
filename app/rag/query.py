@@ -1,9 +1,8 @@
 """Answer questions using only the latest-indexed article chunks (LangChain + pgvector)."""
 
+from __future__ import annotations
 import warnings
 warnings.filterwarnings("ignore")
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 from langchain_community.vectorstores import PGVector
@@ -54,7 +53,7 @@ def _dedupe_sources(docs: list) -> list[dict[str, str]]:
     return out
 
 
-def ask_latest_news(question: str, *, k: int = 8) -> RAGAnswer:
+def ask_latest_news(question: str, *, k: int = 20) -> RAGAnswer:
     """
     Retrieve from the current RAG collection (latest ingest only) and answer with ChatOllama.
 
