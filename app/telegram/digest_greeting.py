@@ -36,7 +36,7 @@ def digest_greeting_line(*, display_name: str | None = None, when: datetime | No
         stem = "Good night"
 
     if display_name:
-        return f"{stem}, {display_name}."
+        return f"{stem}, {display_name}!"
     return f"{stem}."
 
 
