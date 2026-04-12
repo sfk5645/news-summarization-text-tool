@@ -143,7 +143,7 @@ class _DigestPDF(FPDF):
         self.ln(2)
 
 
-def build_digest_pdf_bytes(rows: list[dict[str, Any]]) -> bytes:
+def build_digest_pdf_bytes(rows: list[dict[str, Any]], *, greeting: str | None = None) -> bytes:
     run_at, non_fin, finance_market, finance_symbols = _organize(rows)
     if run_at.tzinfo is not None:
         title_time = run_at.strftime("%Y-%m-%d %H:%M UTC")
@@ -157,6 +157,8 @@ def build_digest_pdf_bytes(rows: list[dict[str, Any]]) -> bytes:
     pdf.multi_cell(0, 8, "Your Daily News Digest", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("DejaVu", "", 11)
     pdf.multi_cell(0, 6, title_time, new_x="LMARGIN", new_y="NEXT")
+    if greeting:
+        pdf.multi_cell(0, 6, greeting.strip(), new_x="LMARGIN", new_y="NEXT")
     pdf.ln(4)
 
     for topic, bullets in non_fin:

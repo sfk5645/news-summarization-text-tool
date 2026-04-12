@@ -4,6 +4,7 @@ import os
 import pyetrade
 from dotenv import load_dotenv
 
+#Complete this once Etrade prod API gets acceepted
 load_dotenv()
 
 E_TRADE_API_KEY = os.getenv("E_TRADE_API_KEY")
@@ -39,4 +40,4 @@ def get_portfolio_ticket_symbols():
     """auth = OAuth1Session(E_TRADE_API_KEY, E_TRADE_API_SECRET, E_TRADE_REQUEST_TOKEN, E_TRADE_REQUEST_TOKEN_SECRET)
     req = auth.get(accounts_url)
     print(req)"""
-    return ["AAPL", "AMD", "AMZN", "BULL", "FBIO", "GOOGL", "GPUS", "LAES", "MSFT", "NVDA", "PLTR", "PLUG", "QQQ", "TSLA", "TSM", "UAVS"]
+    return ["AAPL", "AMD", "AMZN", "GOOGL", "MSFT", "NVDA", "PLTR", "QQQ", "TSLA", "TSM"]

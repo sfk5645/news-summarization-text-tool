@@ -11,6 +11,23 @@ def _base(token: str) -> str:
     return f"https://api.telegram.org/bot{token}"
 
 
+def get_chat(token: str, chat_id: str) -> dict[str, Any]:
+    """Return the ``result`` object from ``getChat`` (chat metadata including ``first_name`` / ``title``)."""
+    r = httpx.get(
+        f"{_base(token)}/getChat",
+        params={"chat_id": chat_id.strip()},
+        timeout=30.0,
+    )
+    r.raise_for_status()
+    data = r.json()
+    if not data.get("ok"):
+        raise RuntimeError(f"Telegram getChat failed: {data!r}")
+    result = data.get("result")
+    if not isinstance(result, dict):
+        raise RuntimeError(f"Telegram getChat missing result: {data!r}")
+    return result
+
+
 def send_message(token: str, chat_id: str, text: str, *, parse_mode: str | None = None) -> dict[str, Any]:
     payload: dict[str, Any] = {"chat_id": chat_id, "text": text}
     if parse_mode:
