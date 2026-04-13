@@ -208,3 +208,5 @@ python -m app.rag ask "..." --json
 | Digest / bot: Ollama errors | `ollama serve`, `OLLAMA_MODEL` pulled and spelled correctly. |
 | Telegram PDF error | Fonts in `app/telegram/fonts/`, token + chat id, **`--telegram`** requires digest (no `--no-summarize`). |
 | `DATABASE_URL` errors | URL reachable from the machine running Python; driver prefix matches `psycopg` expectations. |
+
+#Test
