@@ -40,4 +40,4 @@ def get_portfolio_ticket_symbols():
     """auth = OAuth1Session(E_TRADE_API_KEY, E_TRADE_API_SECRET, E_TRADE_REQUEST_TOKEN, E_TRADE_REQUEST_TOKEN_SECRET)
     req = auth.get(accounts_url)
     print(req)"""
-    return ["AAPL", "AMD", "AMZN", "GOOGL", "MSFT", "NVDA", "PLTR", "QQQ", "TSLA", "TSM"]
+    return ["AAPL", "AMD", "AMZN", "GOOGL", "MSFT", "NVDA", "PLTR", "QQQ", "TSLA", "TSM", "NVTS"]

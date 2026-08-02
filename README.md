@@ -187,6 +187,58 @@ python -m app.rag ask "..." --json
 
 ---
 
+## Deploy to a VPS (GitHub Actions → SSH)
+
+On every push to **`main`** (or via **Actions → Deploy → Run workflow**), GitHub Actions SSHs into your server and runs `scripts/deploy.sh` (`git pull`, `pip install`, restart Telegram bot if a systemd unit exists).
+
+### One-time server setup
+
+1. Install Postgres (`vector` extension), Ollama + models, Python 3, and clone the repo (SSH deploy key or HTTPS with a token that can pull).
+2. Create **`.env` on the server only** (never commit it). Copy PDF fonts under `app/telegram/fonts/`.
+3. Create the venv once:
+
+```bash
+cd /path/to/news-summarization-text-tool
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+python -m app.db.ingest --init-schema --skip-fetch
+```
+
+4. Install the polling bot as a systemd service (edit user/paths in the file first):
+
+```bash
+sudo cp deploy/news-telegram-bot.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now news-telegram-bot
+```
+
+5. Add your daily ingest cron (absolute paths to `.venv/bin/python`, with `--telegram` if desired).
+6. Allow the GitHub deploy key to SSH in: put the **public** key in `~/.ssh/authorized_keys` for `DEPLOY_USER`. Prefer a dedicated deploy key with access only to this repo/server.
+
+### GitHub repository secrets
+
+Under **Settings → Secrets and variables → Actions**, add:
+
+| Secret | Example | Purpose |
+|--------|---------|---------|
+| `DEPLOY_HOST` | `203.0.113.10` | Server IP or hostname |
+| `DEPLOY_USER` | `deploy` | SSH login user |
+| `DEPLOY_SSH_KEY` | *(private key PEM)* | Private key matching `authorized_keys` |
+| `DEPLOY_PATH` | `/home/deploy/news-summarization-text-tool` | Absolute path to the clone |
+| `DEPLOY_PORT` | `22` | Optional SSH port |
+| `DEPLOY_BRANCH` | `main` | Optional branch to pull |
+
+Workflow file: [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml). Server script: [`scripts/deploy.sh`](scripts/deploy.sh).
+
+Manual deploy on the server (same script Actions runs):
+
+```bash
+cd /path/to/news-summarization-text-tool
+./scripts/deploy.sh
+```
+
+---
+
 ## Project layout (high level)
 
 | Path | Role |
@@ -197,6 +249,9 @@ python -m app.rag ask "..." --json
 | `app/rag/` | Embeddings, index, `ask` CLI, query chain |
 | `app/telegram/` | PDF, `notify`, `api`, `poll` bot |
 | `sql/schema.sql` | Tables for articles + digest |
+| `.github/workflows/deploy.yml` | Push-to-`main` SSH deploy |
+| `scripts/deploy.sh` | Server pull / pip / restart bot |
+| `deploy/news-telegram-bot.service` | Example systemd unit for polling |
 
 ---
 

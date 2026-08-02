@@ -1,0 +1,27 @@
+# Example systemd unit for the Telegram RAG polling bot.
+#
+# Install (system-wide; adjust User= and paths):
+#   sudo cp deploy/news-telegram-bot.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now news-telegram-bot
+#
+# Logs:
+#   journalctl -u news-telegram-bot -f
+
+[Unit]
+Description=News summarization Telegram RAG polling bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=YOUR_LINUX_USER
+WorkingDirectory=/home/YOUR_LINUX_USER/news-summarization-text-tool
+Environment=PATH=/home/YOUR_LINUX_USER/news-summarization-text-tool/.venv/bin:/usr/bin
+# Loads TELEGRAM_* / DATABASE_URL / OLLAMA_* from project .env via python-dotenv in the app.
+ExecStart=/home/YOUR_LINUX_USER/news-summarization-text-tool/.venv/bin/python -m app.telegram poll
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
